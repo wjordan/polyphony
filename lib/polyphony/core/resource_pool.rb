@@ -33,7 +33,7 @@ module Polyphony
         @stock.push resource
       end
     end
-        
+
     def method_missing(sym, *args, &block)
       acquire { |r| r.send(sym, *args, &block) }
     end
