@@ -29,8 +29,9 @@ module Polyphony
       @acquired_resources[fiber] = resource
       yield resource
     ensure
-      @acquired_resources.delete(fiber)
-      @stock.push resource if resource
+      if resource && @acquired_resources.delete(fiber) == resource
+        @stock.push resource
+      end
     end
         
     def method_missing(sym, *args, &block)
@@ -46,6 +47,11 @@ module Polyphony
     def add_to_stock
       @size += 1
       @stock << @allocator.call
+    end
+
+    def discard
+      @size -= 1
+      @acquired_resources.delete(Fiber.current)
     end
 
     def preheat!
