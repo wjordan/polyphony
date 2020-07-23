@@ -14,6 +14,7 @@ module Polyphony
       @size = 0
       @stock = Polyphony::Queue.new
       @acquired_resources = {}
+      @acquired_counts = {}
     end
 
     def available
@@ -22,15 +23,23 @@ module Polyphony
 
     def acquire
       fiber = Fiber.current
-      return @acquired_resources[fiber] if @acquired_resources[fiber]
+      unless (resource = @acquired_resources[fiber])
+        @acquired_counts[fiber] = 0
+        add_to_stock if @size < @limit && @stock.empty?
+        snooze until (resource = @stock.shift)
+        @acquired_resources[fiber] = resource
+      end
+      @acquired_counts[fiber] += 1
 
-      add_to_stock if @size < @limit && @stock.empty?
-      snooze until (resource = @stock.shift)
-      @acquired_resources[fiber] = resource
       yield resource
     ensure
-      if resource && @acquired_resources.delete(fiber) == resource
-        @stock.push resource
+      if resource
+        if (@acquired_counts[fiber] -= 1) == 0
+          @acquired_counts.delete(fiber)
+          if @acquired_resources.delete(fiber) == resource
+            @stock.push resource
+          end
+        end
       end
     end
 
