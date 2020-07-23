@@ -25,7 +25,7 @@ module Polyphony
       return @acquired_resources[fiber] if @acquired_resources[fiber]
 
       add_to_stock if @size < @limit && @stock.empty?
-      resource = @stock.shift
+      snooze until (resource = @stock.shift)
       @acquired_resources[fiber] = resource
       yield resource
     ensure
